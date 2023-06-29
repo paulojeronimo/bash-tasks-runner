@@ -92,7 +92,7 @@ done
 
 [ -f "$tasks_file" ] || log --fatal Tasks file \"$tasks_file\" not found!
 source "$tasks_file" &> /dev/null || log --fatal Failed to read \"$tasks_file\"!
-if ! [ "$1" ]
+if ! [ "${1:-}" ]
 then
   [ "$default_tasks" ] && set -- $(sed "s/,/ /g" <<< $default_tasks)
 fi
