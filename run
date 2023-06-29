@@ -6,35 +6,36 @@ cd "$(dirname "$0")"
 
 log() {
   local mark=
-  [ "${level:-}" ] || level=0
+  [ "${level:-}" ] || level=1
   case "$level" in
-    0) mark='->';;
-    1) mark='-->';;
-    2) mark='--->';;
-    3) mark='---->';;
-    4) mark='----->';;
+    1) mark='->';;
+    2) mark='-->';;
+    3) mark='--->';;
+    4) mark='---->';;
+    5) mark='----->';;
   esac
+  mark="$level $mark"
   [[ $1 =~ ^- ]] && {
     case "$1" in
       --fatal)
         shift
-        echo $level FATAL $mark "$@"
+        echo FATAL $mark "$@"
         exit 1
         ;;
       --error)
         shift
-        echo $level ERROR $mark "$@"
+        echo ERROR $mark "$@"
         ;;
       --warn)
         shift
-        echo $level WARNING $mark "$@"
+        echo WARNING $mark "$@"
         ;;
     esac
     local options=$1
     shift
-    echo $options $level $mark "$@"
+    echo $options INFO $level $mark "$@"
   } || {
-    echo $level $mark "$@"
+    echo INFO $mark "$@"
   }
 }
 
