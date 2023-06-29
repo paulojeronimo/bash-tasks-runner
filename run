@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# A simple Bash tasks runner
+# Author: Paulo Jerônimo - https://paulojeronimo.com
+set -eou pipefail
+cd "$(dirname "$0")"
+
+log() {
+  local mark=
+  [ "${level:-}" ] || level=0
+  case "$level" in
+    0) mark='->';;
+    1) mark='-->';;
+    2) mark='--->';;
+    3) mark='---->';;
+    4) mark='----->';;
+  esac
+  [[ $1 =~ ^- ]] && {
+    case "$1" in
+      --fatal)
+        shift
+        echo $level FATAL $mark "$@"
+        exit 1
+        ;;
+      --error)
+        shift
+        echo $level ERROR $mark "$@"
+        ;;
+      --warn)
+        shift
+        echo $level WARNING $mark "$@"
+        ;;
+    esac
+    local options=$1
+    shift
+    echo $options $level $mark "$@"
+  } || {
+    echo $level $mark "$@"
+  }
+}
+
+gt() {
+  log Changing current directory from \"$(basename $PWD)\" to \"$1\"
+  cd $1
+}
+
+call-task() {
+  local task=$1
+  local invalid_task_fn=${invalid_task_fn:-invalid-task-error}
+  if [[ $task =~ ^-- ]]
+  then
+    [ "${1:-}" ] && 
+      log Running task \"$task\" with options \"$@\" ... ||
+      log Running task \"$task\" ...
+    type -- $task &> /dev/null && {
+      shift
+      (( level++ ))
+      $task "$@" || {
+        log Task \"$task\" returned $?
+        return 1
+      }
+      (( level-- ))
+    } || $invalid_task_fn $task
+  else
+    $invalid_task_fn $task
+    return 1
+  fi
+}
+
+invalid-task-error() {
+  log --error Invalid task: $1
+}
+
+task-not-defined-warn() {
+  log --warn Task \"$1\" not defined!
+}
+
+while [ "${1:-}" ]
+do
+  case "$1" in
+    --tasks-file)
+      shift
+      tasks_file=$1
+      ;;
+    --default-tasks)
+      shift
+      default_tasks=$1
+      ;;
+    *) break
+  esac
+  shift
+done
+
+[ -f "$tasks_file" ] || log --fatal Tasks file \"$tasks_file\" not found!
+source "$tasks_file" &> /dev/null || log --fatal Failed to read \"$tasks_file\"!
+if ! [ "$1" ]
+then
+  [ "$default_tasks" ] && set -- $(sed "s/,/ /g" <<< $default_tasks)
+fi
+invalid_task_fn=task-not-defined-warn call-task --init
+
+while :
+do
+  task=$1
+  shift
+  options=
+  while [ "${1:-}" ]
+  do
+    [[ $1 =~ ^-- ]] && break || options="$options $1"
+    shift
+  done
+  options=$(echo $options)
+  [ "$options" = "" ] &&
+    call-task $task ||
+    call-task $task "$options"
+  [ $? = 0 ] || break
+  [ "${1:-}" ] || break
+  echo
+done
