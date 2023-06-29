@@ -109,9 +109,12 @@ do
     shift
   done
   options=$(echo $options)
-  [ "$options" = "" ] &&
-    call-task $task ||
+  if [ "$options" = "" ]
+  then
+    call-task $task
+  else
     call-task $task "$options"
+  fi
   [ $? = 0 ] || break
   [ "${1:-}" ] || break
   echo
