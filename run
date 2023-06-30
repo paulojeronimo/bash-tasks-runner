@@ -5,16 +5,8 @@ set -eou pipefail
 cd "$(dirname "$0")"
 
 log() {
-  local mark=
   [ "${level:-}" ] || level=1
-  case "$level" in
-    1) mark='->';;
-    2) mark='-->';;
-    3) mark='--->';;
-    4) mark='---->';;
-    5) mark='----->';;
-  esac
-  mark="$level $mark"
+  local mark=$(printf '%s>' $(eval printf -- '-%.0s' {1..$level}))
   [[ $1 =~ ^- ]] && {
     case "$1" in
       --fatal)
@@ -33,7 +25,7 @@ log() {
     esac
     local options=$1
     shift
-    echo $options INFO $level $mark "$@"
+    echo $options INFO $mark "$@"
   } || {
     echo INFO $mark "$@"
   }
@@ -49,11 +41,11 @@ call-task() {
   local invalid_task_fn=${invalid_task_fn:-invalid-task-error}
   if [[ $task =~ ^-- ]]
   then
+    shift
     [ "${1:-}" ] && 
       log Running task \"$task\" with options \"$@\" ... ||
       log Running task \"$task\" ...
     type -- $task &> /dev/null && {
-      shift
       (( level++ ))
       $task "$@" || {
         log Task \"$task\" returned $?
